@@ -4,7 +4,7 @@
  * and add/edit/delete operations via the Laravel API.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus, Eye, Pencil, Trash2, GraduationCap,
   X,
@@ -17,6 +17,7 @@ import './Universities.css';
 
 export default function Universities() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
   // Data state
@@ -72,15 +73,15 @@ export default function Universities() {
   }, [page, showToast]);
 
   // --- Open Add Form ---
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     setEditingUni(null);
     setForm(getEmptyForm());
     setErrors({});
     setFormOpen(true);
-  };
+  }, [setEditingUni, setForm, setErrors, setFormOpen]);
 
   // --- Open Edit Form ---
-  const handleEdit = (uni) => {
+  const handleEdit = useCallback((uni) => {
     setEditingUni(uni);
     setForm({
       name: uni.name || '',
@@ -98,7 +99,16 @@ export default function Universities() {
     });
     setErrors({});
     setFormOpen(true);
-  };
+  }, [setEditingUni, setForm, setErrors, setFormOpen]);
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditingUni(null);
+
+    if (location.pathname !== '/universities') {
+      navigate('/universities');
+    }
+  }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -182,7 +192,7 @@ export default function Universities() {
         await api.post('/admin/universities', payload);
         showToast('University created successfully.', 'success');
       }
-      setFormOpen(false);
+      closeForm();
       fetchUniversities();
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to save university.';
@@ -359,11 +369,11 @@ export default function Universities() {
 
       {/* --- Add/Edit Form Modal --- */}
       {formOpen && (
-        <div className="modal-overlay" onClick={() => setFormOpen(false)}>
+        <div className="modal-overlay" onClick={closeForm}>
           <div className="modal modal--form" onClick={(e) => e.stopPropagation()}>
             <div className="modal__header">
               <h2>{editingUni ? 'Edit University' : 'Add University'}</h2>
-              <button className="modal__close" onClick={() => setFormOpen(false)}><X size={18} /></button>
+              <button className="modal__close" onClick={closeForm} aria-label="Close form"><X size={18} /></button>
             </div>
             <form className="modal__body" onSubmit={handleSubmit}>
               <div className="form-grid">
@@ -431,7 +441,7 @@ export default function Universities() {
               </div>
 
               <div className="modal__actions">
-                <button type="button" className="btn-secondary" onClick={() => setFormOpen(false)}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={closeForm}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={formLoading}>
                   {formLoading ? 'Saving...' : editingUni ? 'Update University' : 'Create University'}
                 </button>
