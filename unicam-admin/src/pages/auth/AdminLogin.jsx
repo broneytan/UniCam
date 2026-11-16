@@ -1,13 +1,16 @@
 
 import { useState } from 'react';
-import { GraduationCap, LockKeyhole, Mail } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 import api from '../../api/api';
+import { useLanguage } from '../../i18n/LanguageContext';
 import graduationStudent from '../../assets/graduation-student.png';
 import './AdminLogin.css';
 
 function AdminLogin({ onLogin }) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -46,55 +49,68 @@ function AdminLogin({ onLogin }) {
         <img
           className="login-image"
           src={graduationStudent}
-          alt="Graduate holding a university guide"
+          alt={t('Graduate holding a university guide')}
         />
         <div className="login-form-area">
           <div className="login-panel">
             <div className="login-brand">
-              <div className="login-brand__icon">
-                <GraduationCap size={28} />
-              </div>
-              <div>
-                <p className="login-brand__eyebrow">University administration</p>
-                <h1>UniCam Admin</h1>
-              </div>
+              <img
+                className="login-brand__logo"
+                src="/images/unicam-logo.png"
+                alt="UniCam"
+              />
+              <p className="login-brand__eyebrow">{t('University administration')}</p>
+              <h1>UniCam Admin</h1>
             </div>
 
-            <p className="login-subtitle">Sign in to access the university dashboard.</p>
+            {/* <p className="login-subtitle">
+              {t('Sign in to access the university dashboard.')}
+            </p> */}
 
             <form className="login-form" onSubmit={handleLogin}>
               <label className="login-field">
-                <span>Email</span>
+                <span>{t('Email')}</span>
                 <div className="login-field__input-wrap">
                   <Mail size={16} />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@unicam.edu"
+                    placeholder={t('Enter email')}
                     required
                   />
                 </div>
               </label>
 
-              <label className="login-field">
-                <span>Password</span>
+              <div className="login-field">
+                <label htmlFor="admin-password">{t('Password')}</label>
                 <div className="login-field__input-wrap">
                   <LockKeyhole size={16} />
                   <input
-                    type="password"
+                    id="admin-password"
+                    type={passwordVisible ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder={t('Enter password')}
                     required
                   />
+                  <button
+                    className="login-password-toggle"
+                    type="button"
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                    aria-label={t(passwordVisible ? 'Hide password' : 'Show password')}
+                    title={t(passwordVisible ? 'Hide password' : 'Show password')}
+                    aria-pressed={passwordVisible}
+                  >
+                    {passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
                 </div>
-              </label>
+              </div>
 
-              {error && <p className="login-error">{error}</p>}
+              {error && <p className="login-error">{t(error)}</p>}
 
               <button className="login-btn" type="submit" disabled={loading}>
-                {loading ? 'Signing in...' : 'Login'}
+                {t(loading ? 'Signing in...' : 'Login')}
               </button>
             </form>
           </div>

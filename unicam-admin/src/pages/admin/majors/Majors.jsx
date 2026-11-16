@@ -9,6 +9,7 @@ import api from '../../../api/api';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import DataTable from '../../../components/DataTable';
 import { useToast } from '../../../components/toastContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import '../universities/Universities.css';
 
 const EMPTY_FORM = {
@@ -58,6 +59,7 @@ function resolveRouteModal(pathname, majors, routeMajor) {
 }
 
 function MajorFormModal({ mode, initialMajor, universities, onClose, onSubmit }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState(() => buildFormFromMajor(initialMajor));
   const [errors, setErrors] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -129,8 +131,8 @@ function MajorFormModal({ mode, initialMajor, universities, onClose, onSubmit })
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal--form" onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
-          <h2>{mode === 'edit' ? 'Edit Major' : 'Add Major'}</h2>
-          <button className="modal__close" onClick={onClose} type="button">×</button>
+          <h2>{t(mode === 'edit' ? 'Edit Major' : 'Add Major')}</h2>
+          <button className="modal__close" onClick={onClose} type="button" aria-label={t('Close form')}>×</button>
         </div>
 
         <form className="modal__body" onSubmit={handleSubmit}>
@@ -140,7 +142,7 @@ function MajorFormModal({ mode, initialMajor, universities, onClose, onSubmit })
                 value={form.university_id}
                 onChange={(e) => setForm((prev) => ({ ...prev, university_id: e.target.value }))}
               >
-                <option value="">Select university</option>
+                <option value="">{t('Select university')}</option>
                 {universities.map((university) => (
                   <option key={university.id} value={university.id}>{university.name}</option>
                 ))}
@@ -185,9 +187,9 @@ function MajorFormModal({ mode, initialMajor, universities, onClose, onSubmit })
           </div>
 
           <div className="modal__actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>{t('Cancel')}</button>
             <button type="submit" className="btn-primary" disabled={submitLoading}>
-              {submitLoading ? <><Loader2 size={16} className="spin" /> Saving...</> : mode === 'edit' ? 'Update Major' : 'Create Major'}
+              {submitLoading ? <><Loader2 size={16} className="spin" /> {t('Saving...')}</> : t(mode === 'edit' ? 'Update Major' : 'Create Major')}
             </button>
           </div>
         </form>
@@ -200,6 +202,7 @@ export default function Majors() {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [majors, setMajors] = useState([]);
   const [universities, setUniversities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,11 +237,11 @@ export default function Majors() {
         perPage: res.data.per_page || 10,
       });
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to load majors.', 'error');
+      showToast(t(err.response?.data?.message || 'Failed to load majors.'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, showToast]);
+  }, [page, showToast, t]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -264,8 +267,8 @@ export default function Majors() {
 
     api.get(`/majors/${majorId}`)
       .then((res) => setRouteMajor(res.data))
-      .catch(() => showToast('Unable to load major details.', 'error'));
-  }, [location.pathname, majors, showToast]);
+      .catch(() => showToast(t('Unable to load major details.'), 'error'));
+  }, [location.pathname, majors, showToast, t]);
 
   useEffect(() => {
     fetchMajors();
@@ -310,10 +313,10 @@ export default function Majors() {
     try {
       if (isEditing && currentMajor) {
         await api.put(`/admin/majors/${currentMajor.id}`, payload);
-        showToast('Major updated successfully.', 'success');
+        showToast(t('Major updated successfully.'), 'success');
       } else {
         await api.post('/admin/majors', payload);
-        showToast('Major created successfully.', 'success');
+        showToast(t('Major created successfully.'), 'success');
       }
 
       setFormOpen(false);
@@ -321,7 +324,7 @@ export default function Majors() {
       setPage(1);
       await fetchMajors();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to save major.', 'error');
+      showToast(t(err.response?.data?.message || 'Failed to save major.'), 'error');
       throw err;
     }
   }
@@ -332,12 +335,12 @@ export default function Majors() {
     setDeleteLoading(true);
     try {
       await api.delete(`/admin/majors/${deleteTarget.id}`);
-      showToast('Major deleted successfully.', 'success');
+      showToast(t('Major deleted successfully.'), 'success');
       setDeleteTarget(null);
       setPage(1);
       await fetchMajors();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete major.', 'error');
+      showToast(t(err.response?.data?.message || 'Failed to delete major.'), 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -363,10 +366,10 @@ export default function Majors() {
       width: '110px',
       render: (row) => (
         <div className="table-actions">
-          <button className="table-action-btn" title="Edit" onClick={() => openEditForm(row)}>
+          <button className="table-action-btn" title={t('Edit')} onClick={() => openEditForm(row)}>
             <Pencil size={15} />
           </button>
-          <button className="table-action-btn table-action-btn--danger" title="Delete" onClick={() => setDeleteTarget(row)}>
+          <button className="table-action-btn table-action-btn--danger" title={t('Delete')} onClick={() => setDeleteTarget(row)}>
             <Trash2 size={15} />
           </button>
         </div>
@@ -401,7 +404,7 @@ export default function Majors() {
         onPageChange={setPage}
         actions={
           <button className="btn-primary" onClick={openAddForm}>
-            <Plus size={16} /> Add Major
+            <Plus size={16} /> {t('Add Major')}
           </button>
         }
       />
@@ -424,8 +427,8 @@ export default function Majors() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete Major"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        title={t('Delete Major')}
+        message={t('Are you sure you want to delete "{name}"? This action cannot be undone.', { name: deleteTarget?.name })}
         confirmLabel="Delete"
         variant="danger"
         loading={deleteLoading}
@@ -437,14 +440,16 @@ export default function Majors() {
 }
 
 function FormField({ label, required, error, children, full }) {
+  const { t } = useLanguage();
+
   return (
     <div className={`form-field ${full ? 'form-field--full' : ''} ${error ? 'form-field--error' : ''}`}>
       <label className="form-label">
-        {label}
+        {t(label)}
         {required && <span className="form-required">*</span>}
       </label>
       {children}
-      {error && <span className="form-error">{error}</span>}
+      {error && <span className="form-error">{t(error)}</span>}
     </div>
   );
 }

@@ -13,12 +13,14 @@ import api from '../../../api/api';
 import DataTable from '../../../components/DataTable';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import { useToast } from '../../../components/toastContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import './Universities.css';
 
 export default function Universities() {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   // Data state
   const [universities, setUniversities] = useState([]);
@@ -66,11 +68,11 @@ export default function Universities() {
         perPage: res.data.per_page || 10,
       });
     } catch {
-      showToast('Failed to load universities.', 'error');
+      showToast(t('Failed to load universities.'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [page, showToast]);
+  }, [page, showToast, t]);
 
   // --- Open Add Form ---
   const handleAdd = useCallback(() => {
@@ -136,8 +138,8 @@ export default function Universities() {
 
     api.get(`/universities/${id}`)
       .then((res) => handleEdit(res.data))
-      .catch(() => showToast('Unable to load university details.', 'error'));
-  }, [location.pathname, universities, showToast, handleAdd, handleEdit]);
+      .catch(() => showToast(t('Unable to load university details.'), 'error'));
+  }, [location.pathname, universities, showToast, handleAdd, handleEdit, t]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // --- Filtered Data (client-side search & filter on current page) ---
@@ -187,16 +189,16 @@ export default function Universities() {
 
       if (editingUni) {
         await api.put(`/admin/universities/${editingUni.id}`, payload);
-        showToast('University updated successfully.', 'success');
+        showToast(t('University updated successfully.'), 'success');
       } else {
         await api.post('/admin/universities', payload);
-        showToast('University created successfully.', 'success');
+        showToast(t('University created successfully.'), 'success');
       }
       closeForm();
       fetchUniversities();
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to save university.';
-      showToast(message, 'error');
+      showToast(t(message), 'error');
       // Set validation errors from backend
       if (err.response?.data?.errors) {
         const backendErrors = {};
@@ -216,11 +218,11 @@ export default function Universities() {
     setDeleteLoading(true);
     try {
       await api.delete(`/admin/universities/${deleteTarget.id}`);
-      showToast('University deleted successfully.', 'success');
+      showToast(t('University deleted successfully.'), 'success');
       setDeleteTarget(null);
       fetchUniversities();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete university.', 'error');
+      showToast(t(err.response?.data?.message || 'Failed to delete university.'), 'error');
     } finally {
       setDeleteLoading(false);
     }
@@ -265,7 +267,7 @@ export default function Universities() {
       label: 'Status',
       render: (row) => (
         <span className={`status-badge ${row.is_active ? 'status-badge--active' : 'status-badge--inactive'}`}>
-          {row.is_active ? 'Active' : 'Inactive'}
+          {t(row.is_active ? 'Active' : 'Inactive')}
         </span>
       ),
     },
@@ -275,13 +277,13 @@ export default function Universities() {
       width: '120px',
       render: (row) => (
         <div className="table-actions">
-          <button className="table-action-btn" title="View" onClick={() => setViewUni(row)}>
+          <button className="table-action-btn" title={t('View')} onClick={() => setViewUni(row)}>
             <Eye size={15} />
           </button>
-          <button className="table-action-btn" title="Edit" onClick={() => handleEdit(row)}>
+          <button className="table-action-btn" title={t('Edit')} onClick={() => handleEdit(row)}>
             <Pencil size={15} />
           </button>
-          <button className="table-action-btn table-action-btn--danger" title="Delete" onClick={() => setDeleteTarget(row)}>
+          <button className="table-action-btn table-action-btn--danger" title={t('Delete')} onClick={() => setDeleteTarget(row)}>
             <Trash2 size={15} />
           </button>
         </div>
@@ -325,7 +327,7 @@ export default function Universities() {
         onPageChange={setPage}
         actions={
           <button className="btn-primary" onClick={handleAdd}>
-            <Plus size={16} /> Add University
+            <Plus size={16} /> {t('Add University')}
           </button>
         }
       />
@@ -335,7 +337,7 @@ export default function Universities() {
         <div className="modal-overlay" onClick={() => setViewUni(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal__header">
-              <h2>University Details</h2>
+              <h2>{t('University Details')}</h2>
               <button className="modal__close" onClick={() => setViewUni(null)}><X size={18} /></button>
             </div>
             <div className="modal__body">
@@ -353,7 +355,7 @@ export default function Universities() {
                 <DetailRow label="Description" value={viewUni.description} full />
                 {viewUni.majors && viewUni.majors.length > 0 && (
                   <div className="detail-row detail-row--full">
-                    <span className="detail-label">Majors ({viewUni.majors.length})</span>
+                    <span className="detail-label">{t('Majors ({count})', { count: viewUni.majors.length })}</span>
                     <div className="detail-value">
                       {viewUni.majors.map((m) => (
                         <span key={m.id} className="detail-tag">{m.name}</span>
@@ -372,58 +374,58 @@ export default function Universities() {
         <div className="modal-overlay" onClick={closeForm}>
           <div className="modal modal--form" onClick={(e) => e.stopPropagation()}>
             <div className="modal__header">
-              <h2>{editingUni ? 'Edit University' : 'Add University'}</h2>
-              <button className="modal__close" onClick={closeForm} aria-label="Close form"><X size={18} /></button>
+              <h2>{t(editingUni ? 'Edit University' : 'Add University')}</h2>
+              <button className="modal__close" onClick={closeForm} aria-label={t('Close form')}><X size={18} /></button>
             </div>
             <form className="modal__body" onSubmit={handleSubmit}>
               <div className="form-grid">
                 <FormField label="Name" required error={errors.name}>
-                  <input type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="University name" />
+                  <input type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder={t('University name')} />
                 </FormField>
 
                 <FormField label="Short Name" error={errors.short_name}>
-                  <input type="text" value={form.short_name} onChange={(e) => updateField('short_name', e.target.value)} placeholder="e.g. MIT" />
+                  <input type="text" value={form.short_name} onChange={(e) => updateField('short_name', e.target.value)} placeholder={t('e.g. MIT')} />
                 </FormField>
 
                 <FormField label="Location" error={errors.location}>
-                  <input type="text" value={form.location} onChange={(e) => updateField('location', e.target.value)} placeholder="City or region" />
+                  <input type="text" value={form.location} onChange={(e) => updateField('location', e.target.value)} placeholder={t('City or region')} />
                 </FormField>
 
                 <FormField label="Address" error={errors.address}>
-                  <input type="text" value={form.address} onChange={(e) => updateField('address', e.target.value)} placeholder="Full address" />
+                  <input type="text" value={form.address} onChange={(e) => updateField('address', e.target.value)} placeholder={t('Full address')} />
                 </FormField>
 
                 <FormField label="University Type" error={errors.university_type}>
                   <select value={form.university_type} onChange={(e) => updateField('university_type', e.target.value)}>
-                    <option value="">Select type</option>
-                    <option value="Public">Public</option>
-                    <option value="Private">Private</option>
-                    <option value="International">International</option>
+                    <option value="">{t('Select type')}</option>
+                    <option value="Public">{t('Public')}</option>
+                    <option value="Private">{t('Private')}</option>
+                    <option value="International">{t('International')}</option>
                   </select>
                 </FormField>
 
                 <FormField label="Tuition Fee ($)" error={errors.tuition_fee}>
-                  <input type="number" value={form.tuition_fee} onChange={(e) => updateField('tuition_fee', e.target.value)} placeholder="e.g. 5000" min="0" step="0.01" />
+                  <input type="number" value={form.tuition_fee} onChange={(e) => updateField('tuition_fee', e.target.value)} placeholder={t('e.g. 5000')} min="0" step="0.01" />
                 </FormField>
 
                 <FormField label="Email" error={errors.email}>
-                  <input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} placeholder="admin@university.edu" />
+                  <input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} placeholder={t('admin@university.edu')} />
                 </FormField>
 
                 <FormField label="Phone" error={errors.phone}>
-                  <input type="text" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} placeholder="+1 234 567 890" />
+                  <input type="text" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} placeholder={t('+1 234 567 890')} />
                 </FormField>
 
                 <FormField label="Website" error={errors.website}>
-                  <input type="text" value={form.website} onChange={(e) => updateField('website', e.target.value)} placeholder="https://university.edu" />
+                  <input type="text" value={form.website} onChange={(e) => updateField('website', e.target.value)} placeholder={t('https://university.edu')} />
                 </FormField>
 
                 <FormField label="Image URL" error={errors.image_url}>
-                  <input type="text" value={form.image_url} onChange={(e) => updateField('image_url', e.target.value)} placeholder="https://example.com/image.jpg" />
+                  <input type="text" value={form.image_url} onChange={(e) => updateField('image_url', e.target.value)} placeholder={t('https://example.com/image.jpg')} />
                 </FormField>
 
                 <FormField label="Description" error={errors.description} full>
-                  <textarea value={form.description} onChange={(e) => updateField('description', e.target.value)} placeholder="Brief description of the university" rows={3} />
+                  <textarea value={form.description} onChange={(e) => updateField('description', e.target.value)} placeholder={t('Brief description of the university')} rows={3} />
                 </FormField>
 
                 <FormField label="Status">
@@ -441,9 +443,9 @@ export default function Universities() {
               </div>
 
               <div className="modal__actions">
-                <button type="button" className="btn-secondary" onClick={closeForm}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={closeForm}>{t('Cancel')}</button>
                 <button type="submit" className="btn-primary" disabled={formLoading}>
-                  {formLoading ? 'Saving...' : editingUni ? 'Update University' : 'Create University'}
+                  {t(formLoading ? 'Saving...' : editingUni ? 'Update University' : 'Create University')}
                 </button>
               </div>
             </form>
@@ -454,8 +456,8 @@ export default function Universities() {
       {/* --- Delete Confirmation --- */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete University"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        title={t('Delete University')}
+        message={t('Are you sure you want to delete "{name}"? This action cannot be undone.', { name: deleteTarget?.name })}
         confirmLabel="Delete"
         variant="danger"
         loading={deleteLoading}
@@ -469,11 +471,13 @@ export default function Universities() {
 // --- Helper Components ---
 
 function DetailRow({ label, value, isLink, badge, full }) {
+  const { t } = useLanguage();
+
   return (
     <div className={`detail-row ${full ? 'detail-row--full' : ''}`}>
-      <span className="detail-label">{label}</span>
+      <span className="detail-label">{t(label)}</span>
       {badge ? (
-        <span className={`status-badge status-badge--${badge}`}>{value}</span>
+        <span className={`status-badge status-badge--${badge}`}>{t(value)}</span>
       ) : isLink && value ? (
         <a href={value} target="_blank" rel="noopener noreferrer" className="detail-value detail-link">{value}</a>
       ) : (
@@ -484,14 +488,16 @@ function DetailRow({ label, value, isLink, badge, full }) {
 }
 
 function FormField({ label, required, error, children, full }) {
+  const { t } = useLanguage();
+
   return (
     <div className={`form-field ${full ? 'form-field--full' : ''} ${error ? 'form-field--error' : ''}`}>
       <label className="form-label">
-        {label}
+        {t(label)}
         {required && <span className="form-required">*</span>}
       </label>
       {children}
-      {error && <span className="form-error">{error}</span>}
+      {error && <span className="form-error">{t(error)}</span>}
     </div>
   );
 }

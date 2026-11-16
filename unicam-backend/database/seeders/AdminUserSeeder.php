@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class AdminUserSeeder extends Seeder
 {
@@ -14,19 +13,31 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
-         // Change these values before running the seeder.
-        $email = 'qynn6c@unicam.local';
-        $password = 'admin@123';
+        $name = config('unicam.admin.name') ?: 'UniCam Admin';
+        $email = config('unicam.admin.email');
+        $password = config('unicam.admin.password');
 
-        // Create a new admin only if this email does not exist.
-        $user = User::firstOrCreate(
-            ['email' => $email],
-            [
-                'name' => 'UniCam Admin',
-                'password' => Hash::make($password),
-                'role' => 'admin',
-            ]
-        );
-        // Do not overwrite an existing user's password or role.
+        if (blank($email) || blank($password)) {
+            throw new RuntimeException(
+                'Set UNICAM_ADMIN_EMAIL and UNICAM_ADMIN_PASSWORD before seeding the database.'
+            );
+        }
+
+        $user = User::query()->firstOrNew(['email' => $email]);
+
+        if ($user->exists) {
+            if ($user->role !== 'admin') {
+                throw new RuntimeException(
+                    'The configured admin email already belongs to a non-admin user.'
+                );
+            }
+
+            return;
+        }
+
+        $user->name = $name;
+        $user->password = $password;
+        $user->role = 'admin';
+        $user->save();
     }
 }

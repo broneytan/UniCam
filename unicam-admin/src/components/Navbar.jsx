@@ -1,108 +1,221 @@
 /**
- * Navbar — Top navigation bar with burger menu, breadcrumbs,
- * notifications, and admin account menu.
+ * Navbar — Top navigation bar with search, display controls,
+ * notifications, language options, and admin account menu.
  * Sticky on scroll. Adapts to sidebar collapsed/expanded state.
  */
-import { useState, useRef, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Menu,
+  Search,
   Bell,
-  ChevronRight,
+  Globe2,
+  Moon,
+  Sun,
   User,
   LogOut,
   Settings,
-  Home,
+  GraduationCap,
+  BookOpen,
+  Loader2,
 } from 'lucide-react';
+import api from '../api/api';
+import { useLanguage } from '../i18n/LanguageContext';
 import './Navbar.css';
 
-// Map route paths to readable breadcrumb labels
-const BREADCRUMB_MAP = {
-  '/dashboard': 'Dashboard',
-  '/universities': 'Universities',
-  '/universities/add': 'Add University',
-  '/majors': 'Majors',
-  '/majors/add': 'Add Major',
-  '/students': 'Students',
-  '/profile': 'Admin Profile',
-  '/settings': 'Settings',
-};
+function getResponseRows(data) {
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data?.data) ? data.data : [];
+}
 
-// Map of page titles
-const PAGE_TITLES = {
-  '/dashboard': 'Dashboard',
-  '/universities': 'University Management',
-  '/universities/add': 'Add University',
-  '/majors': 'Major Management',
-  '/majors/add': 'Add Major',
-  '/students': 'Student Management',
-  '/profile': 'Admin Profile',
-  '/settings': 'Settings',
-};
+async function fetchAllPages(endpoint) {
+  const firstResponse = await api.get(endpoint, { params: { page: 1 } });
+  const rows = getResponseRows(firstResponse.data);
+  const lastPage = Number(firstResponse.data?.last_page || 1);
+  const remainingRequests = [];
+
+  for (let page = 2; page <= lastPage; page += 1) {
+    remainingRequests.push(api.get(endpoint, { params: { page } }));
+  }
+
+  const remainingResponses = await Promise.all(remainingRequests);
+  return [
+    ...rows,
+    ...remainingResponses.flatMap((response) => getResponseRows(response.data)),
+  ];
+}
+
+function getSearchResults(directory, query) {
+  if (!directory || query.trim().length < 2) return [];
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const universities = directory.universities
+    .filter((university) => [
+      university.name,
+      university.short_name,
+      university.location,
+    ].some((value) => value?.toLocaleLowerCase().includes(normalizedQuery)))
+    .map((university) => ({
+      id: `university-${university.id}`,
+      kind: 'university',
+      title: university.name,
+      detail: [university.short_name, university.location].filter(Boolean).join(' · '),
+      path: `/universities/edit/${university.id}`,
+    }));
+  const majors = directory.majors
+    .filter((major) => [
+      major.name,
+      major.university?.name,
+      major.university?.short_name,
+    ].some((value) => value?.toLocaleLowerCase().includes(normalizedQuery)))
+    .map((major) => ({
+      id: `major-${major.id}`,
+      kind: 'major',
+      title: major.name,
+      detail: major.university?.short_name || major.university?.name || '',
+      path: `/majors/edit/${major.id}`,
+    }));
+
+  return [...universities, ...majors].slice(0, 8);
+}
 
 export default function Navbar({ onToggleSidebar, onToggleMobile, admin, onLogout }) {
-  const location = useLocation();
   const navigate = useNavigate();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef(null);
+  const { language, setLanguage, t } = useLanguage();
+  const [openPanel, setOpenPanel] = useState('');
+  const [query, setQuery] = useState('');
+  const [directory, setDirectory] = useState(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState('');
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('admin_theme') === 'dark' ? 'dark' : 'light'
+  );
+  const controlsRef = useRef(null);
+  const directoryPromiseRef = useRef(null);
 
-  // Build breadcrumb segments from current path
-  function getBreadcrumbs() {
-    const path = location.pathname;
-    const segments = [];
+  const loadDirectory = useCallback(async (refresh = false) => {
+    if (directory && !refresh) return directory;
+    if (directoryPromiseRef.current) return directoryPromiseRef.current;
 
-    // Always start with Dashboard
-    segments.push({ label: 'Dashboard', path: '/dashboard', icon: Home });
+    setDirectory(null);
+    setDirectoryLoading(true);
+    setDirectoryError('');
+    const request = Promise.all([
+      fetchAllPages('/universities'),
+      fetchAllPages('/majors'),
+    ])
+      .then(([universities, majors]) => {
+        const result = { universities, majors };
+        setDirectory(result);
+        return result;
+      })
+      .catch((error) => {
+        directoryPromiseRef.current = null;
+        throw error;
+      })
+      .finally(() => setDirectoryLoading(false));
 
-    // Handle edit paths like /universities/edit/5
-    if (path.match(/^\/universities\/edit\/\d+/)) {
-      segments.push({ label: 'Universities', path: '/universities' });
-      segments.push({ label: 'Edit University', path: path });
-    } else if (path.match(/^\/majors\/edit\/\d+/)) {
-      segments.push({ label: 'Majors', path: '/majors' });
-      segments.push({ label: 'Edit Major', path: path });
-    } else if (path !== '/dashboard') {
-      // Build intermediate breadcrumbs
-      const parts = path.split('/').filter(Boolean);
-      let accumulated = '';
-      for (const part of parts) {
-        accumulated += '/' + part;
-        const label = BREADCRUMB_MAP[accumulated];
-        if (label) {
-          segments.push({ label, path: accumulated });
-        }
+    directoryPromiseRef.current = request;
+    try {
+      return await request;
+    } finally {
+      if (directoryPromiseRef.current === request) {
+        directoryPromiseRef.current = null;
       }
     }
+  }, [directory]);
 
-    return segments;
-  }
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    localStorage.setItem('admin_theme', theme);
+  }, [theme]);
 
-  // Get current page title
-  function getPageTitle() {
-    const path = location.pathname;
-    if (path.match(/^\/universities\/edit\/\d+/)) return 'Edit University';
-    if (path.match(/^\/majors\/edit\/\d+/)) return 'Edit Major';
-    return PAGE_TITLES[path] || 'Dashboard';
-  }
-
-  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
-        setProfileOpen(false);
+      if (controlsRef.current && !controlsRef.current.contains(e.target)) {
+        setOpenPanel('');
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const breadcrumbs = getBreadcrumbs();
-  const pageTitle = getPageTitle();
+  useEffect(() => {
+    if (openPanel !== 'search' || query.trim().length < 2 || directory) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      loadDirectory().catch(() => {
+        setDirectoryError(t('Search failed. Please try again.'));
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [directory, loadDirectory, openPanel, query, t]);
+
+  const searchResults = useMemo(
+    () => getSearchResults(directory, query),
+    [directory, query]
+  );
+
+  const notificationAlerts = useMemo(() => {
+    if (!directory) return [];
+    const inactiveCount = directory.universities.filter(
+      (university) => !(
+        university.is_active === true ||
+        university.is_active === 1 ||
+        university.is_active === '1'
+      )
+    ).length;
+    const unclassifiedCount = directory.universities.filter(
+      (university) => !university.university_type
+    ).length;
+
+    return [
+      inactiveCount > 0 && {
+        id: 'inactive',
+        message: t('Inactive universities'),
+        count: inactiveCount,
+      },
+      unclassifiedCount > 0 && {
+        id: 'unclassified',
+        message: t('Universities without a type'),
+        count: unclassifiedCount,
+      },
+    ].filter(Boolean);
+  }, [directory, t]);
+
+  function togglePanel(panel) {
+    const nextPanel = openPanel === panel ? '' : panel;
+    setOpenPanel(nextPanel);
+    if (nextPanel === 'notifications') {
+      loadDirectory(true).catch(() => {
+        setDirectoryError(t('Could not load alerts.'));
+      });
+    }
+  }
+
+  function openSearchResult(path) {
+    navigate(path);
+    setOpenPanel('');
+    setQuery('');
+  }
+
+  async function handleSearchSubmit(event) {
+    event.preventDefault();
+    if (query.trim().length < 2) return;
+
+    try {
+      const searchableDirectory = directory || await loadDirectory();
+      const firstResult = getSearchResults(searchableDirectory, query)[0];
+      if (firstResult) openSearchResult(firstResult.path);
+    } catch {
+      setDirectoryError(t('Search failed. Please try again.'));
+    }
+  }
 
   return (
-    <header className="navbar" role="banner">
+    <header className="navbar" role="banner" ref={controlsRef}>
       <div className="navbar__left">
-        {/* Burger menu — toggles sidebar on desktop, opens drawer on mobile */}
         <button
           className="navbar__burger"
           onClick={() => {
@@ -113,93 +226,256 @@ export default function Navbar({ onToggleSidebar, onToggleMobile, admin, onLogou
               onToggleSidebar();
             }
           }}
-          aria-label="Toggle navigation menu"
+          type="button"
+          aria-label={t('Toggle navigation menu')}
+          title={t('Toggle navigation menu')}
         >
           <Menu size={20} />
         </button>
 
-        {/* Page title & breadcrumb */}
-        <div className="navbar__title-group">
-          <h1 className="navbar__title">{pageTitle}</h1>
-          <nav className="navbar__breadcrumb" aria-label="Breadcrumb">
-            <ol className="navbar__breadcrumb-list">
-              {breadcrumbs.map((crumb, index) => {
-                const isLast = index === breadcrumbs.length - 1;
-                const Icon = crumb.icon;
-                return (
-                  <li key={crumb.path} className="navbar__breadcrumb-item">
-                    {index > 0 && (
-                      <ChevronRight size={12} className="navbar__breadcrumb-sep" />
-                    )}
-                    {isLast ? (
-                      <span className="navbar__breadcrumb-current">
-                        {Icon && <Icon size={12} />}
-                        {crumb.label}
+        <form
+          className="navbar__search-wrap"
+          role="search"
+          onSubmit={handleSearchSubmit}
+        >
+          <div className="navbar__search">
+            <button
+              className="navbar__search-submit"
+              type="submit"
+              aria-label={t('Search')}
+              title={t('Search')}
+            >
+              <Search size={17} aria-hidden="true" />
+            </button>
+            <input
+              type="search"
+              aria-label={t('Search universities and majors')}
+              placeholder={t('Search universities, majors...')}
+              value={query}
+              onFocus={() => setOpenPanel('search')}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setDirectoryError('');
+                setOpenPanel('search');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setOpenPanel('');
+              }}
+            />
+          </div>
+          {openPanel === 'search' && (
+            <div className="navbar__search-results" role="listbox" aria-label={t('Search')}>
+              {query.trim().length < 2 ? (
+                <p className="navbar__search-message">{t('Type at least 2 characters to search.')}</p>
+              ) : directoryLoading ? (
+                <p className="navbar__search-message">
+                  <Loader2 className="navbar__loading-icon" size={16} />
+                  {t('Searching...')}
+                </p>
+              ) : directoryError ? (
+                <div className="navbar__search-message navbar__search-message--error">
+                  <span>{directoryError}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      directoryPromiseRef.current = null;
+                      setDirectory(null);
+                      setDirectoryError('');
+                    }}
+                  >
+                    {t('Retry')}
+                  </button>
+                </div>
+              ) : searchResults.length ? (
+                searchResults.map((result) => {
+                  const ResultIcon = result.kind === 'university' ? GraduationCap : BookOpen;
+                  return (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      className="navbar__search-result"
+                      key={result.id}
+                      onClick={() => openSearchResult(result.path)}
+                    >
+                      <ResultIcon size={17} />
+                      <span>
+                        <strong>{result.title}</strong>
+                        <small>{result.detail || t(result.kind === 'university' ? 'University result' : 'Major result')}</small>
                       </span>
-                    ) : (
-                      <button
-                        className="navbar__breadcrumb-link"
-                        onClick={() => navigate(crumb.path)}
-                      >
-                        {Icon && <Icon size={12} />}
-                        {crumb.label}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        </div>
+                      <small>{t('Open')}</small>
+                    </button>
+                  );
+                })
+              ) : directory ? (
+                <p className="navbar__search-message">{t('No matching universities or majors.')}</p>
+              ) : null}
+            </div>
+          )}
+        </form>
       </div>
 
       <div className="navbar__right">
-        {/* Notifications (placeholder — real data future) */}
-        <button className="navbar__icon-btn" aria-label="Notifications" title="Notifications">
-          <Bell size={20} />
+        <button
+          className="navbar__icon-btn"
+          type="button"
+          aria-label={t(`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`)}
+          title={t(`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`)}
+          aria-pressed={theme === 'dark'}
+          onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
+        >
+          {theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}
         </button>
 
-        {/* Admin profile dropdown */}
-        <div className="navbar__profile" ref={profileRef}>
+        <div className="navbar__control">
           <button
-            className="navbar__profile-btn"
-            onClick={() => setProfileOpen((prev) => !prev)}
-            aria-expanded={profileOpen}
-            aria-haspopup="menu"
+            className="navbar__icon-btn"
+            type="button"
+            aria-label={t('Notifications')}
+            title={t('Notifications')}
+            aria-expanded={openPanel === 'notifications'}
+            onClick={() => togglePanel('notifications')}
           >
-            <div className="navbar__avatar">
-              {(admin?.name || 'A').charAt(0).toUpperCase()}
+            <Bell size={19} />
+            {notificationAlerts.length > 0 && (
+              <span className="navbar__notification-count">
+                {notificationAlerts.length}
+              </span>
+            )}
+          </button>
+          {openPanel === 'notifications' && (
+            <div className="navbar__popover navbar__popover--notifications">
+              <strong>{t('Notifications')}</strong>
+              <p className="navbar__popover-description">
+                {t('Current alerts from your university records.')}
+              </p>
+              {directoryLoading ? (
+                <p className="navbar__popover-state">{t('Loading alerts...')}</p>
+              ) : directoryError ? (
+                <div className="navbar__popover-error">
+                  <p>{directoryError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      directoryPromiseRef.current = null;
+                      setDirectory(null);
+                      setDirectoryError('');
+                      loadDirectory().catch(() => setDirectoryError(t('Could not load alerts.')));
+                    }}
+                  >
+                    {t('Retry')}
+                  </button>
+                </div>
+              ) : notificationAlerts.length ? (
+                <div className="navbar__alert-list">
+                  {notificationAlerts.map((alert) => (
+                    <button
+                      type="button"
+                      className="navbar__alert-item"
+                      key={alert.id}
+                      onClick={() => {
+                        navigate('/universities');
+                        setOpenPanel('');
+                      }}
+                    >
+                      <span>{alert.message}</span>
+                      <strong>{alert.count}</strong>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="navbar__alert-review"
+                    onClick={() => {
+                      navigate('/universities');
+                      setOpenPanel('');
+                    }}
+                  >
+                    {t('Review universities')}
+                  </button>
+                </div>
+              ) : (
+                <p className="navbar__popover-state">{t('No current alerts.')}</p>
+              )}
             </div>
-            <span className="navbar__profile-name">{admin?.name || 'Admin'}</span>
+          )}
+        </div>
+
+        <div className="navbar__control">
+          <button
+            className="navbar__icon-btn"
+            type="button"
+            aria-label={t('Language')}
+            title={t('Language')}
+            aria-expanded={openPanel === 'language'}
+            onClick={() => togglePanel('language')}
+          >
+            <Globe2 size={19} />
+          </button>
+          {openPanel === 'language' && (
+            <div className="navbar__popover navbar__popover--language" role="menu" aria-label={t('Language')}>
+              <strong>{t('Language')}</strong>
+              {[
+                { value: 'en', label: 'English' },
+                { value: 'km', label: 'Khmer' },
+              ].map((option) => (
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={language === option.value}
+                  className={`navbar__language-option ${language === option.value ? 'navbar__language-option--selected' : ''}`}
+                  key={option.value}
+                  onClick={() => {
+                    setLanguage(option.value);
+                    setOpenPanel('');
+                  }}
+                >
+                  <span>{t(option.label)}</span>
+                  <span>{language === option.value ? '✓' : ''}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="navbar__profile">
+          <button
+            className="navbar__icon-btn navbar__profile-btn"
+            type="button"
+            onClick={() => setOpenPanel((current) => current === 'profile' ? '' : 'profile')}
+            aria-expanded={openPanel === 'profile'}
+            aria-haspopup="menu"
+            aria-label={`${t('User menu for')} ${admin?.name || t('Admin')}`}
+            title={`${t('User menu for')} ${admin?.name || t('Admin')}`}
+          >
+            <User size={19} aria-hidden="true" />
           </button>
 
-          {/* Dropdown menu */}
-          {profileOpen && (
+          {openPanel === 'profile' && (
             <div className="navbar__dropdown" role="menu">
               <button
                 className="navbar__dropdown-item"
-                onClick={() => { navigate('/profile'); setProfileOpen(false); }}
+                onClick={() => { navigate('/profile'); setOpenPanel(''); }}
                 role="menuitem"
               >
                 <User size={16} />
-                <span>My Profile</span>
+                <span>{t('My Profile')}</span>
               </button>
               <button
                 className="navbar__dropdown-item"
-                onClick={() => { navigate('/settings'); setProfileOpen(false); }}
+                onClick={() => { navigate('/settings'); setOpenPanel(''); }}
                 role="menuitem"
               >
                 <Settings size={16} />
-                <span>Settings</span>
+                <span>{t('Settings')}</span>
               </button>
               <div className="navbar__dropdown-divider" />
               <button
                 className="navbar__dropdown-item navbar__dropdown-item--danger"
-                onClick={() => { onLogout(); setProfileOpen(false); }}
+                onClick={() => { onLogout(); setOpenPanel(''); }}
                 role="menuitem"
               >
                 <LogOut size={16} />
-                <span>Logout</span>
+                <span>{t('Logout')}</span>
               </button>
             </div>
           )}

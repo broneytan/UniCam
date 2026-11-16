@@ -3,6 +3,7 @@
  * loading state, and empty state.
  */
 import { Search, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import './DataTable.css';
 
 export default function DataTable({
@@ -22,6 +23,8 @@ export default function DataTable({
   actions,         // Header action buttons: React element(s)
   title,           // Optional table title
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="data-table-wrapper">
       {/* Table header with search, filters, and actions */}
@@ -38,10 +41,10 @@ export default function DataTable({
               <input
                 type="text"
                 className="data-table__search-input"
-                placeholder={searchPlaceholder || 'Search...'}
+                placeholder={t(searchPlaceholder || 'Search...')}
                 value={searchValue || ''}
                 onChange={(e) => onSearch(e.target.value)}
-                aria-label="Search table"
+                aria-label={t('Search table')}
               />
             </div>
           )}
@@ -53,11 +56,11 @@ export default function DataTable({
               className="data-table__filter"
               value={filterValues?.[filter.value] || ''}
               onChange={(e) => onFilterChange?.(filter.value, e.target.value)}
-              aria-label={filter.label}
+              aria-label={t(filter.label)}
             >
-              <option value="">{filter.label}</option>
+              <option value="">{t(filter.label)}</option>
               {filter.options.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
               ))}
             </select>
           ))}
@@ -74,7 +77,7 @@ export default function DataTable({
             <tr>
               {columns.map((col) => (
                 <th key={col.key} style={col.width ? { width: col.width } : undefined}>
-                  {col.label}
+                  {t(col.label)}
                 </th>
               ))}
             </tr>
@@ -107,7 +110,7 @@ export default function DataTable({
                 <td colSpan={columns.length}>
                   <div className="data-table__empty">
                     {EmptyIcon ? <EmptyIcon size={40} /> : <Inbox size={40} />}
-                    <p>{emptyMessage || 'No records found.'}</p>
+                    <p>{t(emptyMessage || 'No records found.')}</p>
                   </div>
                 </td>
               </tr>
@@ -120,26 +123,29 @@ export default function DataTable({
       {pagination && pagination.lastPage > 1 && (
         <div className="data-table__pagination">
           <span className="data-table__pagination-info">
-            Page {pagination.page} of {pagination.lastPage}
-            {pagination.total != null && ` · ${pagination.total} total`}
+            {t('Page {page} of {lastPage}', {
+              page: pagination.page,
+              lastPage: pagination.lastPage,
+            })}
+            {pagination.total != null && ` · ${t('{total} total', { total: pagination.total })}`}
           </span>
           <div className="data-table__pagination-btns">
             <button
               className="data-table__page-btn"
               disabled={pagination.page <= 1}
               onClick={() => onPageChange?.(pagination.page - 1)}
-              aria-label="Previous page"
+              aria-label={t('Previous page')}
             >
               <ChevronLeft size={16} />
-              Previous
+              {t('Previous')}
             </button>
             <button
               className="data-table__page-btn"
               disabled={pagination.page >= pagination.lastPage}
               onClick={() => onPageChange?.(pagination.page + 1)}
-              aria-label="Next page"
+              aria-label={t('Next page')}
             >
-              Next
+              {t('Next')}
               <ChevronRight size={16} />
             </button>
           </div>

@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { ToastContext } from './toastContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import './Toast.css';
 
 // Icon map for each toast type
@@ -20,6 +21,7 @@ let toastIdCounter = 0;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const { t } = useLanguage();
 
   // Add a new toast notification
   const showToast = useCallback((message, type = 'info', duration = 4000) => {
@@ -52,11 +54,11 @@ export function ToastProvider({ children }) {
               role="alert"
             >
               <Icon className="toast__icon" size={18} />
-              <span className="toast__message">{toast.message}</span>
+              <span className="toast__message">{t(toast.message)}</span>
               <button
                 className="toast__close"
                 onClick={() => dismissToast(toast.id)}
-                aria-label="Dismiss notification"
+                aria-label={t('Dismiss notification')}
               >
                 <X size={14} />
               </button>

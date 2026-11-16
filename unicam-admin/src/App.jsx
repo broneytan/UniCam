@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import api from './api/api';
 import { ToastProvider } from './components/Toast';
+import { LanguageProvider } from './i18n/LanguageContext';
 import AdminLayout from './layouts/AdminLayout';
 import AdminLogin from './pages/auth/AdminLogin';
 import Dashboard from './pages/admin/dashboard/Dashboard';
@@ -52,9 +53,10 @@ function App() {
   }
 
   return (
-    <ToastProvider>
-      <BrowserRouter>
-        <Routes>
+    <LanguageProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
           <Route
             path="/login"
             element={
@@ -72,9 +74,10 @@ function App() {
               )
             }
           />
-        </Routes>
-      </BrowserRouter>
-    </ToastProvider>
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
+    </LanguageProvider>
   );
 }
 

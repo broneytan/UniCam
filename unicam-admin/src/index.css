@@ -89,6 +89,33 @@
   --transition-slow: 300ms ease;
 }
 
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-white: #111827;
+  --color-bg: #0B1220;
+  --color-bg-card: #151E2D;
+  --color-text: #E5EDF8;
+  --color-text-secondary: #B6C3D6;
+  --color-text-muted: #8998AD;
+  --color-border: #2B374A;
+  --color-border-light: #202B3D;
+  --color-primary-light: #17325A;
+  --color-primary-subtle: #182940;
+  --color-success-light: #102A23;
+  --color-success-border: #1F5944;
+  --color-warning-light: #302719;
+  --color-warning-border: #6A4D1D;
+  --color-error-light: #351D25;
+  --color-error-border: #71323E;
+  --color-info-light: #17325A;
+  --color-info-border: #294D7B;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.24), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.24);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.34), 0 8px 10px -6px rgba(0, 0, 0, 0.28);
+}
+
 /* --- Reset & Base Styles --- */
 *,
 *::before,

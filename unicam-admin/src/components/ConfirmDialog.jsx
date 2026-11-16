@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import './ConfirmDialog.css';
 
 export default function ConfirmDialog({
@@ -19,6 +20,7 @@ export default function ConfirmDialog({
   onCancel,
 }) {
   const cancelRef = useRef(null);
+  const { t } = useLanguage();
 
   // Focus the cancel button when dialog opens (safer default)
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function ConfirmDialog({
     <div className="confirm-dialog__overlay" onClick={onCancel} role="dialog" aria-modal="true" aria-label={title}>
       <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Close button */}
-        <button className="confirm-dialog__close" onClick={onCancel} aria-label="Close dialog">
+        <button className="confirm-dialog__close" onClick={onCancel} aria-label={t('Close dialog')}>
           <X size={18} />
         </button>
 
@@ -53,8 +55,8 @@ export default function ConfirmDialog({
         </div>
 
         {/* Content */}
-        <h2 className="confirm-dialog__title">{title}</h2>
-        <p className="confirm-dialog__message">{message}</p>
+        <h2 className="confirm-dialog__title">{t(title)}</h2>
+        <p className="confirm-dialog__message">{t(message)}</p>
 
         {/* Actions */}
         <div className="confirm-dialog__actions">
@@ -64,14 +66,14 @@ export default function ConfirmDialog({
             onClick={onCancel}
             disabled={loading}
           >
-            {cancelLabel}
+            {t(cancelLabel)}
           </button>
           <button
             className={`confirm-dialog__btn confirm-dialog__btn--${variant}`}
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? 'Processing...' : confirmLabel}
+            {t(loading ? 'Processing...' : confirmLabel)}
           </button>
         </div>
       </div>

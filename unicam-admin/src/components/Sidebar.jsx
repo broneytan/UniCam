@@ -21,6 +21,7 @@ import {
   Plus,
   List,
 } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import './Sidebar.css';
 
 // Navigation menu structure with nested sub-items
@@ -78,6 +79,7 @@ const MENU_ITEMS = [
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, admin, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
   const [expandedMenus, setExpandedMenus] = useState({});
 
   // Toggle a parent menu's expanded state
@@ -134,14 +136,19 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               handleNavigate(item.path);
             }
           }}
-          title={collapsed ? item.label : undefined}
+          onDoubleClick={() => {
+            if (collapsed) onToggle();
+          }}
+          title={collapsed
+            ? t('Double-click to show labels: {label}', { label: t(item.label) })
+            : undefined}
           aria-expanded={hasChildren ? isExpanded : undefined}
           aria-current={itemIsActive && !hasChildren ? 'page' : undefined}
         >
           <span className="sidebar__menu-icon">
             <Icon size={20} />
           </span>
-          <span className="sidebar__menu-label">{item.label}</span>
+          <span className="sidebar__menu-label">{t(item.label)}</span>
           {hasChildren && (
             <span className={`sidebar__chevron ${isExpanded ? 'sidebar__chevron--open' : ''}`}>
               <ChevronDown size={16} />
@@ -177,7 +184,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                     aria-current={childActive ? 'page' : undefined}
                   >
                     <ChildIcon size={16} />
-                    <span>{child.label}</span>
+                    <span>{t(child.label)}</span>
                   </button>
                 </li>
               );
@@ -198,18 +205,22 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       <aside
         className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''} ${mobileOpen ? 'sidebar--mobile-open' : ''}`}
         role="navigation"
-        aria-label="Main navigation"
+        aria-label={t('Main navigation')}
       >
         {/* Logo section */}
         <div className="sidebar__header">
           <div className="sidebar__logo" onClick={() => handleNavigate('/dashboard')}>
-            <div className="sidebar__logo-icon">
-              <GraduationCap size={24} />
-            </div>
-            <div className="sidebar__logo-text">
-              <span className="sidebar__logo-title">UniCam</span>
-              <span className="sidebar__logo-subtitle">Admin Panel</span>
-            </div>
+            <img
+              className="sidebar__logo-image sidebar__logo-image--text"
+              src="/images/unicam-text-logo.png"
+              alt={t('UniCam Admin Panel')}
+            />
+            <img
+              className="sidebar__logo-image sidebar__logo-image--icon"
+              src="/images/unicam-logo.png"
+              alt=""
+              aria-hidden="true"
+            />
           </div>
         </div>
 
@@ -222,13 +233,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
         {/* Admin profile section at bottom */}
         <div className="sidebar__footer">
-          <div className="sidebar__admin" title={admin?.name || 'Admin'}>
+          <div className="sidebar__admin" title={admin?.name || t('Admin')}>
             <div className="sidebar__admin-avatar">
               {(admin?.name || 'A').charAt(0).toUpperCase()}
             </div>
             <div className="sidebar__admin-info">
-              <span className="sidebar__admin-name">{admin?.name || 'Admin'}</span>
-              <span className="sidebar__admin-role">{admin?.role || 'Administrator'}</span>
+              <span className="sidebar__admin-name">{admin?.name || t('Admin')}</span>
+              <span className="sidebar__admin-role">{admin?.role || t('Administrator')}</span>
             </div>
           </div>
         </div>
