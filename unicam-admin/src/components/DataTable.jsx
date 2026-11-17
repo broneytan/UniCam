@@ -19,6 +19,7 @@ export default function DataTable({
   onFilterChange,  // (filterKey, value) => void
   filterValues,    // Object of current filter values
   pagination,      // { page, lastPage, total, perPage }
+  rowNumberOffset = 0,
   onPageChange,    // (page) => void
   actions,         // Header action buttons: React element(s)
   title,           // Optional table title
@@ -99,7 +100,7 @@ export default function DataTable({
                 <tr key={row.id || rowIndex}>
                   {columns.map((col) => (
                     <td key={col.key}>
-                      {col.render ? col.render(row) : row[col.key] ?? '—'}
+                      {col.render ? col.render(row, rowIndex + rowNumberOffset) : row[col.key] ?? '—'}
                     </td>
                   ))}
                 </tr>

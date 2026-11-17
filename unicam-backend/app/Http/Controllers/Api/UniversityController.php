@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\University;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\Request;
+
 class UniversityController extends Controller
 {
     // Return active universities with their majors
@@ -15,6 +15,7 @@ class UniversityController extends Controller
         $universities = University::where('is_active', true)
             ->with('majors')
             ->latest()
+            ->orderByDesc('id')
             ->paginate(10);
 
         return response()->json($universities);
@@ -26,27 +27,27 @@ class UniversityController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-        'name' => ['required', 'string', 'max:255'],
-        'short_name' => ['nullable', 'string', 'max:255'],
-        'description' => ['nullable', 'string'],
-        'location' => ['nullable', 'string', 'max:255'],
-        'address' => ['nullable', 'string', 'max:255'],
-        'website' => ['nullable', 'url', 'max:255'],
-        'phone' => ['nullable', 'string', 'max:50'],
-        'email' => ['nullable', 'email', 'max:255'],
-        'university_type' => ['nullable', 'string', 'max:100'],
-        'tuition_fee' => ['nullable', 'numeric', 'min:0'],
-        'image_url' => ['nullable', 'url', 'max:255'],
-        'is_active' => ['sometimes', 'boolean'],
-    ]);
+            'name' => ['required', 'string', 'max:255'],
+            'short_name' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'university_type' => ['nullable', 'string', 'max:100'],
+            'tuition_fee' => ['nullable', 'numeric', 'min:0'],
+            'image_url' => ['nullable', 'url', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
 
-    return response()->json(
-        University::create($data),
-        201
-    );
+        return response()->json(
+            University::create($data),
+            201
+        );
     }
 
-     // Return one active university with its majors
+    // Return one active university with its majors
     public function show(University $university): JsonResponse
     {
         abort_unless($university->is_active, 404);
@@ -84,7 +85,7 @@ class UniversityController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-   public function destroy(University $university)
+    public function destroy(University $university)
     {
         $university->delete();
 

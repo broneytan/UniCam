@@ -195,7 +195,11 @@ export default function Universities() {
         showToast(t('University created successfully.'), 'success');
       }
       closeForm();
-      fetchUniversities();
+      if (!editingUni && page !== 1) {
+        setPage(1);
+      } else {
+        fetchUniversities();
+      }
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to save university.';
       showToast(t(message), 'error');
@@ -240,10 +244,14 @@ export default function Universities() {
   // --- Table Columns ---
   const columns = [
     {
-      key: 'id',
-      label: 'ID',
+      key: 'no',
+      label: 'No',
       width: '60px',
-      render: (row) => <span style={{ color: 'var(--color-text-muted)' }}>#{row.id}</span>,
+      render: (_, rowIndex) => (
+        <span style={{ color: 'var(--color-text-muted)' }}>
+          {rowIndex + 1}
+        </span>
+      ),
     },
     {
       key: 'name',
@@ -324,6 +332,7 @@ export default function Universities() {
           if (key === 'status') setStatusFilter(val);
         }}
         pagination={pagination}
+        rowNumberOffset={(page - 1) * (pagination.perPage || 10)}
         onPageChange={setPage}
         actions={
           <button className="btn-primary" onClick={handleAdd}>

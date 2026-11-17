@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import api from './api/api';
+import ConfirmDialog from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
+import { PreferencesProvider } from './context/PreferencesContext';
 import { LanguageProvider } from './i18n/LanguageContext';
 import AdminLayout from './layouts/AdminLayout';
 import AdminLogin from './pages/auth/AdminLogin';
@@ -30,8 +32,11 @@ function App() {
       return null;
     }
   });
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   async function handleLogout() {
+    setLogoutLoading(true);
     const token = localStorage.getItem('admin_token');
 
     try {
@@ -44,6 +49,18 @@ function App() {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
       setAdmin(null);
+      setLogoutDialogOpen(false);
+      setLogoutLoading(false);
+    }
+  }
+
+  function requestLogout() {
+    setLogoutDialogOpen(true);
+  }
+
+  function cancelLogout() {
+    if (!logoutLoading) {
+      setLogoutDialogOpen(false);
     }
   }
 
@@ -54,29 +71,42 @@ function App() {
 
   return (
     <LanguageProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-          <Route
-            path="/login"
-            element={
-              admin ? <Navigate to="/dashboard" replace /> : <AdminLogin onLogin={handleLogin} />
-            }
-          />
+      <PreferencesProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  admin ? <Navigate to="/dashboard" replace /> : <AdminLogin onLogin={handleLogin} />
+                }
+              />
 
-          <Route
-            path="*"
-            element={
-              admin ? (
-                <AdminAppShell admin={admin} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          </Routes>
-        </BrowserRouter>
-      </ToastProvider>
+              <Route
+                path="*"
+                element={
+                  admin ? (
+                    <AdminAppShell admin={admin} onLogout={requestLogout} />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+            </Routes>
+            <ConfirmDialog
+              open={logoutDialogOpen}
+              title="Confirm Logout"
+              message="Are you sure you want to log out?"
+              confirmLabel="Logout"
+              cancelLabel="Stay logged in"
+              variant="warning"
+              loading={logoutLoading}
+              onConfirm={handleLogout}
+              onCancel={cancelLogout}
+            />
+          </BrowserRouter>
+        </ToastProvider>
+      </PreferencesProvider>
     </LanguageProvider>
   );
 }

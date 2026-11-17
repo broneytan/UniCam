@@ -321,8 +321,11 @@ export default function Majors() {
 
       setFormOpen(false);
       navigate('/majors');
-      setPage(1);
-      await fetchMajors();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        await fetchMajors();
+      }
     } catch (err) {
       showToast(t(err.response?.data?.message || 'Failed to save major.'), 'error');
       throw err;
@@ -347,7 +350,12 @@ export default function Majors() {
   }
 
   const columns = [
-    { key: 'id', label: 'ID', width: '70px', render: (row) => <span>#{row.id}</span> },
+    {
+      key: 'no',
+      label: 'No',
+      width: '70px',
+      render: (_, rowIndex) => <span>{rowIndex + 1}</span>,
+    },
     { key: 'name', label: 'Major Name' },
     {
       key: 'university',
@@ -401,6 +409,7 @@ export default function Majors() {
           if (key === 'university') setSelectedUniversity(value);
         }}
         pagination={pagination}
+        rowNumberOffset={(page - 1) * (pagination.perPage || 10)}
         onPageChange={setPage}
         actions={
           <button className="btn-primary" onClick={openAddForm}>

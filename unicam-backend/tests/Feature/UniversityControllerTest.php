@@ -76,4 +76,32 @@ class UniversityControllerTest extends TestCase
             'name' => 'North University',
         ])->assertForbidden();
     }
+
+    public function test_university_list_is_newest_first_without_changing_database_ids(): void
+    {
+        $olderUniversity = University::query()->create([
+            'name' => 'Older University',
+            'created_at' => '2025-01-01 10:00:00',
+            'updated_at' => '2025-01-01 10:00:00',
+        ]);
+        $newerUniversity = University::query()->create([
+            'name' => 'Newer University',
+            'created_at' => '2025-01-02 10:00:00',
+            'updated_at' => '2025-01-02 10:00:00',
+        ]);
+
+        $response = $this->getJson('/api/universities')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $newerUniversity->id)
+            ->assertJsonPath('data.1.id', $olderUniversity->id);
+
+        $this->assertSame(
+            [$newerUniversity->id, $olderUniversity->id],
+            array_column($response->json('data'), 'id')
+        );
+        $this->assertDatabaseHas('universities', [
+            'id' => $olderUniversity->id,
+            'name' => 'Older University',
+        ]);
+    }
 }

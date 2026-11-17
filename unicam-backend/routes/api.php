@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MajorController;
+use App\Http\Controllers\Api\StudentController;
+use App\Http\Controllers\Api\UniversityController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\UniversityController;
-use App\Http\Controllers\Api\MajorController;
-use App\Http\Controllers\Api\AuthController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -27,4 +28,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
     Route::apiResource('majors', MajorController::class)
         ->except(['index', 'show']);
+
+    Route::apiResource('students', StudentController::class)
+        ->only(['index', 'show', 'destroy']);
 });

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '../api/api';
 import { useLanguage } from '../i18n/LanguageContext';
+import { usePreferences } from '../context/PreferencesContext';
 import './Navbar.css';
 
 function getResponseRows(data) {
@@ -81,14 +82,12 @@ function getSearchResults(directory, query) {
 export default function Navbar({ onToggleSidebar, onToggleMobile, admin, onLogout }) {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme, notificationPreferences } = usePreferences();
   const [openPanel, setOpenPanel] = useState('');
   const [query, setQuery] = useState('');
   const [directory, setDirectory] = useState(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState('');
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('admin_theme') === 'dark' ? 'dark' : 'light'
-  );
   const controlsRef = useRef(null);
   const directoryPromiseRef = useRef(null);
 
@@ -123,12 +122,6 @@ export default function Navbar({ onToggleSidebar, onToggleMobile, admin, onLogou
       }
     }
   }, [directory]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    localStorage.setItem('admin_theme', theme);
-  }, [theme]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -171,18 +164,18 @@ export default function Navbar({ onToggleSidebar, onToggleMobile, admin, onLogou
     ).length;
 
     return [
-      inactiveCount > 0 && {
+      notificationPreferences.inactiveUniversities && inactiveCount > 0 && {
         id: 'inactive',
         message: t('Inactive universities'),
         count: inactiveCount,
       },
-      unclassifiedCount > 0 && {
+      notificationPreferences.unclassifiedUniversities && unclassifiedCount > 0 && {
         id: 'unclassified',
         message: t('Universities without a type'),
         count: unclassifiedCount,
       },
     ].filter(Boolean);
-  }, [directory, t]);
+  }, [directory, notificationPreferences, t]);
 
   function togglePanel(panel) {
     const nextPanel = openPanel === panel ? '' : panel;

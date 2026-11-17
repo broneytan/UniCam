@@ -257,7 +257,7 @@ export default function Dashboard() {
           Greeting and Refresh
       ====================================== */}
 
-      <div className="dashboard__greeting">
+      {/* <div className="dashboard__greeting">
         <div>
           <h2 className="dashboard__greeting-title">
             {t('Welcome back!')}
@@ -281,7 +281,7 @@ export default function Dashboard() {
           />
           <span>{t(refreshing ? 'Refreshing...' : 'Refresh')}</span>
         </button>
-      </div>
+      </div> */}
 
       {/* ======================================
           API Error Message
@@ -355,7 +355,7 @@ export default function Dashboard() {
           Quick Actions
       ====================================== */}
 
-      <section className="dashboard__quick-actions">
+      {/* <section className="dashboard__quick-actions">
         <div className="dashboard__quick-header">
           <div>
             <h3 className="dashboard__section-title">{t('Quick Actions')}</h3>
@@ -402,7 +402,7 @@ export default function Dashboard() {
             <span>{t('Manage Majors')}</span>
           </button>
         </div>
-      </section>
+      </section> */}
 
       {/* ======================================
           Analytics Charts

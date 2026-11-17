@@ -50,4 +50,33 @@ class MajorControllerTest extends TestCase
 
         $this->assertDatabaseMissing('majors', ['id' => $majorId]);
     }
+
+    public function test_major_list_is_newest_first_without_changing_database_ids(): void
+    {
+        $university = University::query()->create(['name' => 'North University']);
+        $olderMajor = $university->majors()->create([
+            'name' => 'Older Major',
+            'created_at' => '2025-01-01 10:00:00',
+            'updated_at' => '2025-01-01 10:00:00',
+        ]);
+        $newerMajor = $university->majors()->create([
+            'name' => 'Newer Major',
+            'created_at' => '2025-01-02 10:00:00',
+            'updated_at' => '2025-01-02 10:00:00',
+        ]);
+
+        $response = $this->getJson('/api/majors')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $newerMajor->id)
+            ->assertJsonPath('data.1.id', $olderMajor->id);
+
+        $this->assertSame(
+            [$newerMajor->id, $olderMajor->id],
+            array_column($response->json('data'), 'id')
+        );
+        $this->assertDatabaseHas('majors', [
+            'id' => $olderMajor->id,
+            'name' => 'Older Major',
+        ]);
+    }
 }

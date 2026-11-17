@@ -3,20 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Major;
 use App\Models\University;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
 class MajorController extends Controller
 {
     // Return majors belonging to active universities
     public function index(): JsonResponse
     {
         $majors = Major::whereHas('university', function ($query) {
-                $query->where('is_active', true);
-            })
+            $query->where('is_active', true);
+        })
             ->with('university:id,name,short_name')
-            ->orderBy('name')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(10);
 
         return response()->json($majors);
@@ -28,12 +30,12 @@ class MajorController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-        'university_id' => ['required', 'exists:universities,id'],
-        'name' => ['required', 'string', 'max:255'],
-        'description' => ['nullable', 'string'],
-        'tuition_fee' => ['nullable', 'numeric', 'min:0'],
-        'duration_years' => ['nullable', 'integer', 'min:1', 'max:20'],
-    ]);
+            'university_id' => ['required', 'exists:universities,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'tuition_fee' => ['nullable', 'numeric', 'min:0'],
+            'duration_years' => ['nullable', 'integer', 'min:1', 'max:20'],
+        ]);
 
         $university = University::findOrFail($data['university_id']);
 
@@ -44,7 +46,7 @@ class MajorController extends Controller
         return response()->json($major, 201);
     }
 
-  // Return one major if its university is active
+    // Return one major if its university is active
     public function show(Major $major): JsonResponse
     {
         abort_unless($major->university->is_active, 404);
@@ -57,7 +59,7 @@ class MajorController extends Controller
     /**
      * Update the specified resource in storage.
      */
-   public function update(Request $request, Major $major)
+    public function update(Request $request, Major $major)
     {
         $data = $request->validate([
             'university_id' => ['sometimes', 'required', 'exists:universities,id'],
@@ -80,7 +82,7 @@ class MajorController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-   public function destroy(Major $major)
+    public function destroy(Major $major)
     {
         $major->delete();
 
