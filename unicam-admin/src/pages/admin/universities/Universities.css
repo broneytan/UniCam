@@ -201,6 +201,83 @@
   min-height: 110px;
 }
 
+.form-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.image-upload {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.image-upload__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.image-upload__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--color-text);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.image-upload__button input {
+  display: none;
+}
+
+.university-image {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.university-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.university-image--thumbnail {
+  width: 44px;
+  height: 44px;
+}
+
+.university-image--preview {
+  width: 144px;
+  height: 112px;
+}
+
+.university-image--detail {
+  width: min(100%, 360px);
+  height: 180px;
+  margin-bottom: var(--space-5);
+}
+
+.uni-cell__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .form-field--error input,
 .form-field--error select,
 .form-field--error textarea {

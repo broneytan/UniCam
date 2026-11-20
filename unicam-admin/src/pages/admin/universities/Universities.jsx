@@ -40,12 +40,19 @@ export default function Universities() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
 
   // Form state
   const [form, setForm] = useState(getEmptyForm());
 
   // Form errors
   const [errors, setErrors] = useState({});
+
+  useEffect(() => () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   function getEmptyForm() {
     return {
@@ -78,13 +85,19 @@ export default function Universities() {
   const handleAdd = useCallback(() => {
     setEditingUni(null);
     setForm(getEmptyForm());
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
     setErrors({});
     setFormOpen(true);
-  }, [setEditingUni, setForm, setErrors, setFormOpen]);
+  }, [setEditingUni, setForm, setImageFile, setImagePreview, setRemoveImage, setErrors, setFormOpen]);
 
   // --- Open Edit Form ---
   const handleEdit = useCallback((uni) => {
     setEditingUni(uni);
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
     setForm({
       name: uni.name || '',
       short_name: uni.short_name || '',
@@ -101,11 +114,14 @@ export default function Universities() {
     });
     setErrors({});
     setFormOpen(true);
-  }, [setEditingUni, setForm, setErrors, setFormOpen]);
+  }, [setEditingUni, setImageFile, setImagePreview, setRemoveImage, setForm, setErrors, setFormOpen]);
 
   function closeForm() {
     setFormOpen(false);
     setEditingUni(null);
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(false);
 
     if (location.pathname !== '/universities') {
       navigate('/universities');
@@ -168,8 +184,8 @@ export default function Universities() {
     if (form.website && !/^https?:\/\/.+/.test(form.website)) {
       errs.website = 'Website must start with http:// or https://';
     }
-    if (form.image_url && !/^https?:\/\/.+/.test(form.image_url)) {
-      errs.image_url = 'Image URL must start with http:// or https://';
+    if (imageFile && imageFile.size > 2 * 1024 * 1024) {
+      errs.image = 'Image must be 2 MB or smaller.';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -182,16 +198,34 @@ export default function Universities() {
 
     setFormLoading(true);
     try {
-      // Prepare payload — only send non-empty fields
-      const payload = { ...form };
-      if (payload.tuition_fee === '') payload.tuition_fee = null;
-      else payload.tuition_fee = Number(payload.tuition_fee);
+      const payload = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (key === 'image_url') return;
+        if (key === 'tuition_fee' && value !== '') {
+          payload.append(key, String(Number(value)));
+        } else if (typeof value === 'boolean') {
+          payload.append(key, value ? '1' : '0');
+        } else {
+          payload.append(key, value ?? '');
+        }
+      });
+
+      if (imageFile) {
+        payload.append('image', imageFile);
+      } else if (removeImage) {
+        payload.append('remove_image', '1');
+      }
 
       if (editingUni) {
-        await api.put(`/admin/universities/${editingUni.id}`, payload);
+        payload.append('_method', 'PUT');
+        await api.post(`/admin/universities/${editingUni.id}`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         showToast(t('University updated successfully.'), 'success');
       } else {
-        await api.post('/admin/universities', payload);
+        await api.post('/admin/universities', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
         showToast(t('University created successfully.'), 'success');
       }
       closeForm();
@@ -257,9 +291,12 @@ export default function Universities() {
       key: 'name',
       label: 'University',
       render: (row) => (
-        <div className="uni-cell">
-          <strong>{row.name}</strong>
-          {row.short_name && <span className="uni-cell__short">{row.short_name}</span>}
+        <div className="uni-cell__identity">
+          <UniversityImage src={row.image_url} name={row.name} size="thumbnail" />
+          <div className="uni-cell">
+            <strong>{row.name}</strong>
+            {row.short_name && <span className="uni-cell__short">{row.short_name}</span>}
+          </div>
         </div>
       ),
     },
@@ -350,6 +387,13 @@ export default function Universities() {
               <button className="modal__close" onClick={() => setViewUni(null)}><X size={18} /></button>
             </div>
             <div className="modal__body">
+              {viewUni.image_url && (
+                <UniversityImage
+                  src={viewUni.image_url}
+                  name={viewUni.name}
+                  size="detail"
+                />
+              )}
               <div className="detail-grid">
                 <DetailRow label="Name" value={viewUni.name} />
                 <DetailRow label="Short Name" value={viewUni.short_name} />
@@ -429,8 +473,32 @@ export default function Universities() {
                   <input type="text" value={form.website} onChange={(e) => updateField('website', e.target.value)} placeholder={t('https://university.edu')} />
                 </FormField>
 
-                <FormField label="Image URL" error={errors.image_url}>
-                  <input type="text" value={form.image_url} onChange={(e) => updateField('image_url', e.target.value)} placeholder={t('https://example.com/image.jpg')} />
+                <FormField label="University Image" error={errors.image}>
+                  <ImageUpload
+                    currentImage={form.image_url}
+                    currentName={form.name}
+                    previewUrl={imagePreview}
+                    removeImage={removeImage}
+                    onFileChange={(file) => {
+                      setImageFile(file);
+                      setImagePreview(file ? URL.createObjectURL(file) : '');
+                      setRemoveImage(false);
+                      if (errors.image) {
+                        setErrors((previous) => {
+                          const next = { ...previous };
+                          delete next.image;
+                          return next;
+                        });
+                      }
+                    }}
+                    onRemove={() => {
+                      setImageFile(null);
+                      setImagePreview('');
+                      setRemoveImage(true);
+                    }}
+                    onRestore={() => setRemoveImage(false)}
+                  />
+                  <span className="form-hint">{t('JPG, PNG, or WebP. Maximum file size: 2 MB.')}</span>
                 </FormField>
 
                 <FormField label="Description" error={errors.description} full>
@@ -478,6 +546,62 @@ export default function Universities() {
 }
 
 // --- Helper Components ---
+
+function UniversityImage({ src, name, size }) {
+  const { t } = useLanguage();
+  const [failedSrc, setFailedSrc] = useState(null);
+
+  return (
+    <span className={`university-image university-image--${size}`}>
+      {src && failedSrc !== src ? (
+        <img src={src} alt={t('{name} logo', { name })} onError={() => setFailedSrc(src)} />
+      ) : (
+        <GraduationCap size={size === 'detail' ? 36 : 20} aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
+function ImageUpload({
+  currentImage,
+  currentName,
+  previewUrl,
+  removeImage,
+  onFileChange,
+  onRemove,
+  onRestore,
+}) {
+  const { t } = useLanguage();
+  const preview = previewUrl || (!removeImage ? currentImage : '');
+
+  return (
+    <div className="image-upload">
+      <UniversityImage src={preview} name={currentName || t('University')} size="preview" />
+      <div className="image-upload__controls">
+        <label className="image-upload__button">
+          {t(preview ? 'Choose another image' : 'Choose image')}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => {
+              onFileChange(event.target.files?.[0] || null);
+              event.target.value = '';
+            }}
+          />
+        </label>
+        {preview && !removeImage ? (
+          <button type="button" className="btn-secondary" onClick={onRemove}>
+            {t('Remove image')}
+          </button>
+        ) : removeImage ? (
+          <button type="button" className="btn-secondary" onClick={onRestore}>
+            {t('Keep current image')}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function DetailRow({ label, value, isLink, badge, full }) {
   const { t } = useLanguage();
